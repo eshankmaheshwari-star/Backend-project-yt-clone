@@ -1,19 +1,14 @@
 import mongoose from "mongoose";
-import { Db } from "../constants";
+import { Db } from "../constants.js";
 
 const connectDb=async()=>{
     try{
-        await mongoose.connect(`${process.env.MONGODB.URL}/${Db}`)
-        app.on("error",(error)=>{
-            console.log("ERROR: ",error);
-            throw error
-        })
-        app.listen(process.env.PORT,()=>{
-            console.log(`app is listening on port ${process.env.port}`);
-        })
+        const connectionResponse=await mongoose.connect(`${process.env.MONGODB_URI}/${Db}`)
+        console.log(`\n MongoDB connected|| DB HOST:{connectionResponse.connection.host}`);
     } catch(error){
-        console.error("ERROR: ",error)
-        throw error
+        console.log("Mongodb Connection ERROR: ",error)
+        process.exit(1)
     }
 };
 
+export default connectDb

@@ -1,7 +1,9 @@
-import mongoose from "mongoose";
-import { Db } from "./constants";
+// require('dontenv').config({path:'./env'}) worst code consistency
+import dotenv from"dotenv"
 import express from "express";
 const app=express()
+import connectDb from "./db/index.js";
+dotenv.config({path:'./env'})
 // function connectDb(){
 
 // }
@@ -28,3 +30,4 @@ const app=express()
 //     }
 // })()
 
+connectDb() 
