@@ -30,4 +30,17 @@ dotenv.config({path:'./env'})
 //     }
 // })()
 
-connectDb() 
+connectDb() //returns a promise as async
+.then(()=>{
+    //server starts now
+        app.on("error",(error)=>{
+            console.log("ERROR: ",error);
+            throw error
+        })
+        app.listen(process.env.PORT||8000,()=>{
+            console.log(`app is listening on port :${process.env.port}`);
+        })
+})
+.catch((errror)=>{
+    console.log("mongo db failed here:",error)
+})
