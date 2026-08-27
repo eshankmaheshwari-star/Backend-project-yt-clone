@@ -1,0 +1,23 @@
+{
+  "name": "backend-project-yt-clone",
+  "version": "1.0.0",
+  "description": "a backend project to learn how industry make bigprojects",
+  "homepage": "https://github.com/eshankmaheshwari-star/backend-project-yt-clone#readme",
+  "bugs": {
+    "url": "https://github.com/eshankmaheshwari-star/backend-project-yt-clone/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/eshankmaheshwari-star/backend-project-yt-clone.git"
+  },
+  "license": "ISC",
+  "author": "eshanks",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "dev": "nodemon src/index.js"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  }
+}
