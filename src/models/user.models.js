@@ -74,5 +74,6 @@ userSchema.methods.generateRefreshtoken=function(password){
   {
     expiresIn:process.env.REFRESH_TOKEN_EXPIRY
   }
+  )
 }
 export const User=model("User",userSchema)
