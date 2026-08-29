@@ -1,9 +1,8 @@
 // require('dontenv').config({path:'./env'}) worst code consistency
 import dotenv from"dotenv"
-import express from "express";
-const app=express()
+import { app } from "./app.js"; 
 import connectDb from "./db/index.js";
-dotenv.config({path:'./env'})
+dotenv.config({path:'./.env'})
 // function connectDb(){
 
 // }
@@ -38,9 +37,9 @@ connectDb() //returns a promise as async
             throw error
         })
         app.listen(process.env.PORT||8000,()=>{
-            console.log(`app is listening on port :${process.env.port}`);
+            console.log(`app is listening on port :${process.env.PORT}`);
         })
 })
-.catch((errror)=>{
+.catch((error)=>{
     console.log("mongo db failed here:",error)
-})
+}) 
