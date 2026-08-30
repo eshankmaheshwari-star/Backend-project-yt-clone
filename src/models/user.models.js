@@ -45,7 +45,7 @@ const userSchema=new mongoose.Schema({
 // dont write it in callback function as this reference is not known
 userSchema.pre("save",async function (next) {
   if(!this.atModified("password")) return next();
-  this.password=bcrypt.hash(this.password,10)
+  this.password= await bcrypt.hash(this.password,10)
   next()
 })
 userSchema.methods.isPasswordcorrect=async function(password){

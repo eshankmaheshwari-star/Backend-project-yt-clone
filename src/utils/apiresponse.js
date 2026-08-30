@@ -16,4 +16,4 @@ class apiResponse{
     }
 }
 
-export { apiError }
+export { apiResponse }
