@@ -1,5 +1,6 @@
 import mongoose,{model, Schema} from "mongoose"
 import jwt from "jsonwebtoken"//it is like a key
+import bcrypt from "bcrypt";
 const userSchema=new mongoose.Schema({
   username:{
     type:String,
@@ -31,8 +32,7 @@ const userSchema=new mongoose.Schema({
   },
   watchhistory:{
     type:Schema.Types.ObjectId,
-    ref:"Video",
-    required:true,
+    ref:"Video"
   },
   password:{
     type:String,
@@ -43,11 +43,14 @@ const userSchema=new mongoose.Schema({
   },
 }, {timestamps:true})
 // dont write it in callback function as this reference is not known
-userSchema.pre("save",async function (next) {
-  if(!this.atModified("password")) return next();
-  this.password= await bcrypt.hash(this.password,10)
-  next()
-})
+// In user.model.js
+userSchema.pre("save", async function () {
+  // 1. Notice 'next' is completely removed from the parentheses above
+  if(!this.isModified("password")) return; 
+
+  // 2. Because it's async, Mongoose will naturally wait for this to finish
+  this.password = await bcrypt.hash(this.password, 10);
+});
 userSchema.methods.isPasswordcorrect=async function(password){
   return await bcrypt.compare(password,this.password)
 }

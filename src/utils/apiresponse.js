@@ -3,6 +3,7 @@ class apiResponse{
         statusCode,
         data,
         message="success",
+        stack
     ){
         this.statusCode=statusCode
         this.data=data

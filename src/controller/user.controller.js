@@ -29,15 +29,21 @@ const registerUser=asyncHandler( async(req,res)=>{
         throw new apiError(400,"All fields are required")
     }
     //checking user exists 
-    const existUser=User.findOne({
+    const existUser=await User.findOne({
         $or:[{username},{email}]
     })
-    if(existedUser) throw new apiError(409,"User Already exists wit same username and password")
+    if(existUser) throw new apiError(409,"User Already exists wit same username and password")
     const avatarLocalpath= req.files?.avatar[0]?.path
-    const coverimageLocalpath= req.files?.coverimage[0].path
+    // const coverimageLocalpath= req.files?.coverimage[0]?.path
+
+    let coverimageLocalpath;
+    if(req.files && Array.isArray(req.files.coverimage) && req.files.coverimage.length>0){
+        converimagelocalpath=req.files.coverimage[0].path
+    }
+
     if(!avatarLocalpath) throw new apiError(400,"Avatar is required")
     const avatar=await Uploadon(avatarLocalpath)
-    const converimage=await Uploadon(coverimageLocalpath)
+    const coverimage=await Uploadon(coverimageLocalpath)
     if(!avatar) throw new apiError(400,"Avatar is required")
     const user =await User.create({
         fullname,
@@ -54,7 +60,7 @@ const registerUser=asyncHandler( async(req,res)=>{
 
     if(!checkuser)  throw new apiError(400,"something get wrong")
     return res.status(201).json(
-        new apiResonse(200,checkuser,"user got register succesfully")
+        new apiResponse(200,checkuser,"user got register succesfully")
     )
     // wean also send simple user but for structure we do this way
 });
