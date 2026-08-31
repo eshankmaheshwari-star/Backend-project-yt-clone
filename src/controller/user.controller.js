@@ -3,6 +3,18 @@ import { apiError } from "../utils/apierror.js";
 import { User } from "../models/user.models.js";
 import { Uploadon } from "../utils/cloundinary.js";
 import { apiResponse } from "../utils/apiresponse.js";
+
+//asyncHandler is used for webrequest as this func handled internally that why async
+const generateaccessandrefreshtoken=async(userid)=>{
+    try{
+        const user=await User.findById(userid)
+        
+    }catch(error){
+        throw new apiError(500,"something went wrong while generating refrresh and access token")
+    }
+}
+
+
 const registerUser=asyncHandler( async(req,res)=>{
     // res.status(200).json({
     //     message:"ok"
@@ -65,4 +77,28 @@ const registerUser=asyncHandler( async(req,res)=>{
     // wean also send simple user but for structure we do this way
 });
 
-export { registerUser }
+const loginUser=asyncHandler( async(req,res)=>{
+    //login details(not one is empty)
+    //email based or u
+    //database check-->result
+    //access token and refresh token
+    //send secure cookie
+
+    const {email,username,password}=req.body
+    if(!username|| !email) throw new apiError(400,"Username or password is required")
+    const user=await User.findOne({
+        $or: [{username},{email}]
+    })
+    if(!user)   throw new apiError(404,"User does not exists")
+
+    const check=await  user.isPasswordcorrect(password);
+    if(!check){
+          throw new apiError(401,"Invalid user Creedentials")
+    }
+
+
+})
+export { 
+    registerUser, 
+    loginUser
+}
