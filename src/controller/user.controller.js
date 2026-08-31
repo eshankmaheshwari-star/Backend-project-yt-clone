@@ -8,7 +8,11 @@ import { apiResponse } from "../utils/apiresponse.js";
 const generateaccessandrefreshtoken=async(userid)=>{
     try{
         const user=await User.findById(userid)
-        
+        const accesstoken=user.generateAccesstoken()
+        const refreshtoken=user.generateRefreshtoken()
+        user.refreshtoken=refreshtoken
+        await user.save({ validateBeforeSave:false })
+        return {accesstoken,refreshtoken}
     }catch(error){
         throw new apiError(500,"something went wrong while generating refrresh and access token")
     }
@@ -85,7 +89,7 @@ const loginUser=asyncHandler( async(req,res)=>{
     //send secure cookie
 
     const {email,username,password}=req.body
-    if(!username|| !email) throw new apiError(400,"Username or password is required")
+    if(!(username|| email)) throw new apiError(400,"Username or password is required")
     const user=await User.findOne({
         $or: [{username},{email}]
     })
@@ -95,10 +99,60 @@ const loginUser=asyncHandler( async(req,res)=>{
     if(!check){
           throw new apiError(401,"Invalid user Creedentials")
     }
+    const {accesstoken,refreshtoken}=await generateaccessandrefreshtoken(user._id)//only helps to save it in mongo db
 
+    const loggedinuser=await User.findById(user._id).select("-password -refreshtoken")
+    
+    const options={
+        httpOnly:true,//only server modified
+        secure:true
+    }
+    return res
+    .status(200)
+    .cookie("accesstoken",accesstoken,options)
+    .cookie("refreshtoken",refreshtoken,options)
+    .json(
+        new apiResponse(
+            200,
+            {
+                user:loggedinuser,accesstoken,refreshtoken
+            },
+            "User logged in Succcessfully"
+        )
+    )
+})    
 
-})
+const logoutUser=asyncHandler( async(req,res)=>{
+    //middleware can be used for finding the user id
+    await User.findByIdAndUpdate(
+        req.user._id,
+        {
+            $set:{
+                refreshtoken:undefined
+            }
+        },
+        {
+            new:true
+        }
+    )
+        const options={
+        httpOnly:true,//only server modified
+        secure:true
+    }
+    return res
+    .status(200)
+    .clearCookie("accesstoken",options)
+    .clearCookie("refreshtoken",options)
+    .json(
+        new apiResponse(
+            200,
+            {},
+            "User logged out Succcessfully "
+        )
+    )
+}) 
 export { 
     registerUser, 
-    loginUser
+    loginUser,
+    logoutUser
 }
