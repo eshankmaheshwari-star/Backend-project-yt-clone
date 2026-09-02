@@ -44,20 +44,29 @@ const registerUser=asyncHandler( async(req,res)=>{
     ){
         throw new apiError(400,"All fields are required")
     }
+
+    //console.log("body: ",req.body);
+
     //checking user exists 
     const existUser=await User.findOne({
         $or:[{username},{email}]
     })
     if(existUser) throw new apiError(409,"User Already exists wit same username and password")
-    const avatarLocalpath= req.files?.avatar[0]?.path
-    // const coverimageLocalpath= req.files?.coverimage[0]?.path
+
+    //console.log("EXISTING USER:", existUser)
+
+    const avatarLocalpath= req.files?.avatar?.[0]?.path
+    // const coverimageLocalpath= req.files?.coverimage?.[0]?.path
 
     let coverimageLocalpath;
     if(req.files && Array.isArray(req.files.coverimage) && req.files.coverimage.length>0){
-        converimagelocalpath=req.files.coverimage[0].path
+        coverimageLocalpath=req.files.coverimage[0].path
     }
 
     if(!avatarLocalpath) throw new apiError(400,"Avatar is required")
+
+//console.log("AVATAR PATH:", avatarLocalpath)
+
     const avatar=await Uploadon(avatarLocalpath)
     const coverimage=await Uploadon(coverimageLocalpath)
     if(!avatar) throw new apiError(400,"Avatar is required")
@@ -75,6 +84,7 @@ const registerUser=asyncHandler( async(req,res)=>{
     )//check user and also deselect password etc
 
     if(!checkuser)  throw new apiError(400,"something get wrong")
+    //console.log("FILES:", req.files)
     return res.status(201).json(
         new apiResponse(200,checkuser,"user got register succesfully")
     )
@@ -89,17 +99,28 @@ const loginUser=asyncHandler( async(req,res)=>{
     //send secure cookie
 
     const {email,username,password}=req.body
+
+//console.log("LOGIN BODY:", req.body)
+
     if(!(username|| email)) throw new apiError(400,"Username or password is required")
     const user=await User.findOne({
         $or: [{username},{email}]
     })
     if(!user)   throw new apiError(404,"User does not exists")
 
+
+        //console.log("USER FROM DB:", user)
+
     const check=await  user.isPasswordcorrect(password);
     if(!check){
           throw new apiError(401,"Invalid user Creedentials")
     }
+
+// console.log("PASSWORD CORRECT:", check)
+
     const {accesstoken,refreshtoken}=await generateaccessandrefreshtoken(user._id)//only helps to save it in mongo db
+
+        console.log("TOKENS:", accesstoken, refreshtoken)
 
     const loggedinuser=await User.findById(user._id).select("-password -refreshtoken")
     
@@ -135,6 +156,7 @@ const logoutUser=asyncHandler( async(req,res)=>{
             new:true
         }
     )
+    //console.log("LOGOUT USER:", req.user)
         const options={
         httpOnly:true,//only server modified
         secure:true
