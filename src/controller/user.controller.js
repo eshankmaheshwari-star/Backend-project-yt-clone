@@ -285,6 +285,55 @@ const updatecoverimage=asyncHandler(async(req,res)=>{
     return res.status(200)
     .json(new apiResponse(200,user,"cover image updated successfully"))
 })
+const getuserchannelprofile=asyncHandler(async(req,res)=>{ 
+    const {username}=req.params
+    if(!username?.trim()) throw new apiError(400,"username is missing")
+    //User.find({username}) can use this to find username.
+    const channel=await User.aggregate([
+        {
+            $match:{
+                username:username?.toLowerCase()
+            }
+        },
+        {
+            $lookup:{
+                from:"Subscriptions",
+                localField:"_id",
+                foreignField:"channel",
+                as:"subscribers" 
+            }
+        },
+        {
+            $lookup:{
+                from:"Subscriptions",
+                localField:"_id",
+                foreignField:"subscriber",
+                as:"subscribedto" 
+            }
+        },
+        {
+            $addFields:{
+                subscribercount:{
+                    $size:"$subscribers"
+                },
+                channelsubscribedcount:{
+                    $size:"$subscribedto"
+                },
+                issubscribed:{
+                    $cond:{
+                        if:{$in:[req.user?._id,"$subscribers.subscriber"]},
+                        then:true,
+                        else :false
+                    }
+                }
+            }
+        },
+        {
+            
+        }
+    ])
+    //in return we got arrays
+})
 export { 
     registerUser, 
     loginUser,
@@ -296,5 +345,8 @@ export {
     updateaccount,
     updateavatar,
     updatecoverimage,
-    
+    getuserchannelprofile,
+
 }
+
+//$first:"autoher_details" can also be syntax for this one
