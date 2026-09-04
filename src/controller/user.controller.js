@@ -3,7 +3,7 @@ import { apiError } from "../utils/apierror.js";
 import { User } from "../models/user.models.js";
 import { Uploadon } from "../utils/cloundinary.js";
 import { apiResponse } from "../utils/apiresponse.js";
-
+import  jwt  from "jsonwebtoken";
 //asyncHandler is used for webrequest as this func handled internally that why async
 const generateaccessandrefreshtoken=async(userid)=>{
     try{
@@ -17,13 +17,10 @@ const generateaccessandrefreshtoken=async(userid)=>{
         throw new apiError(500,"something went wrong while generating refrresh and access token")
     }
 }
-
-
 const registerUser=asyncHandler( async(req,res)=>{
     // res.status(200).json({
     //     message:"ok"
     // });
-
     //get user deatils from frontend 
     // validation-not empty
     //check if user exists or not:username or email
@@ -33,7 +30,6 @@ const registerUser=asyncHandler( async(req,res)=>{
     //in response remove refresh token and password
     //response check for user creation 
     //return response or error
-// for url we use something else 
 
     const { fullname,email,username,password }=req.body
     // if(fullname===""){
@@ -65,7 +61,7 @@ const registerUser=asyncHandler( async(req,res)=>{
 
     if(!avatarLocalpath) throw new apiError(400,"Avatar is required")
 
-//console.log("AVATAR PATH:", avatarLocalpath)
+    //console.log("AVATAR PATH:", avatarLocalpath)
 
     const avatar=await Uploadon(avatarLocalpath)
     const coverimage=await Uploadon(coverimageLocalpath)
@@ -77,7 +73,6 @@ const registerUser=asyncHandler( async(req,res)=>{
         email,
         password,
         username:username.toLowerCase()
-
     })
     const checkuser=await User.findById(user._id).select(
         "-password -refreshtoken"
@@ -89,7 +84,7 @@ const registerUser=asyncHandler( async(req,res)=>{
         new apiResponse(200,checkuser,"user got register succesfully")
     )
     // wean also send simple user but for structure we do this way
-});
+})
 
 const loginUser=asyncHandler( async(req,res)=>{
     //login details(not one is empty)
@@ -100,7 +95,7 @@ const loginUser=asyncHandler( async(req,res)=>{
 
     const {email,username,password}=req.body
 
-//console.log("LOGIN BODY:", req.body)
+    //console.log("LOGIN BODY:", req.body)
 
     if(!(username|| email)) throw new apiError(400,"Username or password is required")
     const user=await User.findOne({
@@ -116,7 +111,7 @@ const loginUser=asyncHandler( async(req,res)=>{
           throw new apiError(401,"Invalid user Creedentials")
     }
 
-// console.log("PASSWORD CORRECT:", check)
+    // console.log("PASSWORD CORRECT:", check)
 
     const {accesstoken,refreshtoken}=await generateaccessandrefreshtoken(user._id)//only helps to save it in mongo db
 
@@ -173,8 +168,133 @@ const logoutUser=asyncHandler( async(req,res)=>{
         )
     )
 }) 
+
+const refreshAccesstoken=asyncHandler(async(req,res)=>{
+    const incomingRefreshToken = req.cookies.refreshtoken || req.body.refreshtoken
+
+    if (!incomingRefreshToken) {
+        throw new apiError(401, "unauthorized request")
+    }
+
+    try {
+        const decodedToken = jwt.verify(
+            incomingRefreshToken,
+            process.env.REFRESH_TOKEN_SECRET
+        )
+    
+        const user = await User.findById(decodedToken?._id)
+    
+        if (!user) {
+            throw new apiError(401, "Invalid refresh token")
+        }
+    
+        if (incomingRefreshToken !== user?.refreshToken) {
+            throw new apiError(401, "Refresh token is expired or used")
+            
+        }
+    
+        const options = {
+            httpOnly: true,
+            secure: true
+        }
+    
+        const {accesstoken, newRefreshToken} = await generateaccessandrefreshtoken(user._id)
+    
+        return res
+        .status(200)
+        .cookie("accesstoken", accesstoken, options)
+        .cookie("refreshToken", newRefreshToken, options)
+        .json(
+            new apiResponse(
+                200, 
+                {accesstoken, refreshToken: newRefreshToken},
+                "Access token refreshed"
+            )
+        )
+    } catch (error) {
+        throw new apiError(401, error?.message || "Invalid refresh token")
+    }
+    //try catch for more cautious
+})
+const changecurrentPassword=asyncHandler(async(req,res)=>{
+  const {oldpassword,newpassword,cpassword}=req.body
+  if(cpassword!==newpassword)  throw new apiError(400,"both password do not match");
+  const user=await User.findById(req.user?.id);
+  const ispassword=await user.isPasswordcorrect(oldpassword);
+  if(!ispassword) throw new apiError(400,"invalid old password");
+  user.password=newpassword
+  await user.save({validateBeforeSave:false})
+  return res.status(200)
+  .json(new apiResponse(200,{},"password changed successfully"));
+})
+const getCurrentuser=asyncHandler(async(req,res)=>{
+  return res.status(200)
+  .json(200,req.user,"current user fetched successfully")
+})
+// try to write files in such a way that updating text and files should seperate as text dont go again and again and congestion of our website is low 
+const updateaccount=asyncHandler(async(req,res)=>{
+  const {fullname,email}=req.body;
+  if(!fullname || !email) throw new apiError(400,"all fields are required");
+  const user=User.findByIdAndUpdate(req.user?._id,
+    {
+        $set:{
+            fullname,
+            email:email
+        }
+    },
+    {new:true}
+  ).select("-password")
+  return res
+  .status(200)
+  .json(new apiResponse(200,user,"Account detail updated successfully"))
+})
+const updateavatar=asyncHandler(async(req,res)=>{
+//first we use multer to upload files and auth for checking
+    const avatarlocalpath=req.file?.path
+    //file as one is uploading previously we use files
+    if(!avatarlocalpath)    throw new apiError(400,"files is required");
+    const avatar=await Uploadon(avatarlocalpath)
+    if(!avatar.url) throw new apiError(400,"error while uploading files of avatar");
+    const user=await User.findByIdAndUpdate(req.user?._id
+        ,
+        {
+            $set:{
+                avatar:avatar.url//as we are updating it in db .url
+            }
+        },
+        {new:true}
+    ).select("-password")
+    return res.status(200)
+    .json(new apiResponse(200,user,"cover image updated successfully"))
+})
+const updatecoverimage=asyncHandler(async(req,res)=>{ 
+    const coverimagelocalpath=req.file?.path
+    //file as one is uploading previously we use files
+    if(!coverimagelocalpath)    throw new apiError(400,"files is required");
+    const coverimage=await Uploadon(coverimagelocalpath)
+    if(!coverimage.url) throw new apiError(400,"error while uploading files of avatar");
+    const user=await User.findByIdAndUpdate(req.user?._id
+        ,
+        {
+            $set:{
+                coverimage:coverimage.url//as we are updating it in db .url
+            }
+        },
+        {new:true}
+    ).select("-password")
+    return res.status(200)
+    .json(new apiResponse(200,user,"cover image updated successfully"))
+})
 export { 
     registerUser, 
     loginUser,
-    logoutUser
+    logoutUser,
+    refreshAccesstoken,
+    getCurrentuser,
+    updateaccount,
+    changecurrentPassword,
+    updateaccount,
+    updateavatar,
+    updatecoverimage,
+    
 }
