@@ -329,10 +329,84 @@ const getuserchannelprofile=asyncHandler(async(req,res)=>{
             }
         },
         {
-            
+            $project:{
+                fullname:1,
+                username:1,
+                subscribercount:1,
+                channelsubscribedcount:1,
+                issubscribed:1,
+                avatar:1,
+                coverimage:1,
+                email:1,
+            }
         }
     ])
+    if(!channel?.length) throw new apiError(404,"channel is missing")
     //in return we got arrays
+
+    return res.status(200)
+    .json(
+        new apiResponse(200,channel[0],"User channel fetched succesfully")
+    )
+})
+
+// nested lookup for our watch history is important as we go (dont have owner) for owner we have to extra lookup
+// users
+//   │
+//   │ watchHistory[]
+//   ▼
+// videos
+//   │
+//   │ owner
+//   ▼
+// users
+
+const userwatchhistory=asyncHandler(async(req,res)=>{
+    //req.user._id//actualy weget string ,as we use mongoose it will convert this into mongo db id
+    const user=await User.aggregate([
+        {
+            $match:{
+                _id:new mongoose.Types.ObjectId(req.user._id)
+            }
+        },
+        {
+            $lookup:{
+                from:"Videos",
+                localField:"watchhistory",
+                foreignField:"_id",
+                as:"watchhistory",
+                pipeline:[
+                    {
+                        
+                        $lookup:{
+                            from:"Users",
+                            localField:"owner",
+                            foreignField:"_id",
+                            as:"owner",
+                            pipeline:[
+                                {
+                                    $project:{
+                                        fullName:1,
+                                        username:1,
+                                        avatar:1,
+                                    }
+                                },
+                                {
+                                    $addFields:{
+                                        onwer:{
+                                            $first:"$owner"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        }
+    ])
+    return res.status(200)
+    .json(new apiResponse(200,User[0].watchhistory,"watch history fetched successfully"))
 })
 export { 
     registerUser, 
@@ -342,11 +416,10 @@ export {
     getCurrentuser,
     updateaccount,
     changecurrentPassword,
-    updateaccount,
     updateavatar,
     updatecoverimage,
     getuserchannelprofile,
-
+    userwatchhistory,
 }
 
 //$first:"autoher_details" can also be syntax for this one
